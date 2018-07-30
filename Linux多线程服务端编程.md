@@ -8,7 +8,7 @@
 - C++有C的包袱，这既有好处（性能、兼容OS的native语言等），也是沉重的负担（include而不是import、编译模型、语法兼容等）。
 - 为了效率、灵活性和抽象能力，C++付出了生产力方面的代价。写C++的难点在于，往往在学习了语法书之后写出的仍然是不够高效甚至是错误的代码。必须在阅读了诸如Effective C++这里的武功秘笈之后才知道这样为什么不对以及正确的写法。而写Java，写完前半句后eclipse就恨不得直接把正确的后半部分自动生成出来。【滑稽
 - 作者眼里modern C++有几个最重要的coding techniques在书中反复出现: RAII、智能指针、以闭包来做回调/接口
-- 作者推荐的多线程服务端编程模式是Reactor + thread pool。 这里Reactor是指non blocking io + one event loop per thread，其中一个base io thread接受新连接，若干个io thread做网络io。线程池中若干个worker完成具体的计算任务。
+- 作者推荐的多线程服务端编程模式是Reactor + thread pool。 这里Reactor是指non blocking io + one event loop per thread，其中一个base io thread接受新连接，若干个io thread做网络io。线程池中若干个worker thread完成具体的计算任务。
 - 书中大量涉及为什么选择A而不选择B的技术议题（例如选择线程同步方式、IPC方式、服务器编程模型等），作者的选择也许并不一定是最好的或者说通用的，但在作者自己的工作应用场景下，都能详细列出自己这样选择或不选择的理由，这些理由都是说得通并且有相应书籍/文档支持的。
 - 由于很多章节实际上来自于作者博客，所以内容前后其实并不是很系统，而且口语化的语言过多了。另外很多地方都假定读者懂相关的基础知识，虽然作者已经说明本书并不是基础教程，但既然写成了一本书，要深入讨论一个问题，把相关基础知识说明白其实会更好。
 
@@ -16,15 +16,46 @@
 # 线程安全的对象生命期管理
 本章主题可以概括为，如果一个对象可能被多个线程使用，怎样保证它的线程安全，或者更具体地，保证它的构造、析构、成员数据的线程安全。
 
-对象成员数据的线程安全是容易的，只需要一个mutex + RAII lock wrapper(std::lock_guard, std::unique_lock, std::scoped_lock均可)保护临界区。
+## 成员数据的线程安全
+对象成员数据的线程安全是容易的，只需要一个mutex + RAII lock wrapper(std::lock_guard, std::unique_lock, std::scoped_lock均可)保护临界区。注意在正确的前提下，尽可能缩短临界区。
 
+## 构造的线程安全
 对象构造的线程安全只需要保证不在构造函数中将this指针传递给其他线程即可，否则其他线程可能访问到的是未初始化完毕的对象。
 
+## 析构的线程安全
 难点在于对象的析构。只要使用了raw pointer将对象暴露给了其他线程，那么对象的正确访问和析构几乎就不可能正常完成（1.3~1.5节）。正确的方式是使用smart pointer。书中举出Observer模式和对象池两个例子来说明用法。
 - Observer模式：被观察者只需要保存观察者的weak_ptr，在其发生变化需要notifyObserver时，尝试提升观察者的weak_ptr即可。作者在1.14节中批判了Observer模式本身，强调应该使用闭包来实现回调。
 - 对象池：在对象池中保存对象，思路和上面类似，保存创建出的新对象的weak_ptr，利用构造函数中的第二个参数Deleter，传入一个成员函数的闭包来达到如果对象析构则顺便把它从对象池中删除的语义，闭包中指向this的weak_ptr指针来自于share_from_this()。
 
+## shared_ptr的使用
 1.9~1.10节讨论了shared_ptr的几个使用问题：
 - 线程安全问题。shared_ptr的引用计数是安全无锁的，但对象的读写不是，从多个线程访问同一个shared_ptr对象需要加锁。
 - 对象生存期问题。要防止因为拷贝了对象的shared_ptr而意外延长了对象的生存期，可以换用weak_ptr。
-- 
+- 函数参数问题。smart pointer作为函数参数时最好以const reference方式传递，避免不必要的拷贝。
+
+# 线程同步
+本章虽然主要内容是介绍互斥锁和条件变量的正确用法，但作者开篇即强调了几项原则：
+- 尽量减少线程间共享变量、同步的场合
+- 尽量使用生产者消费者队列等高级并发编程构件而不是使用底层同步原语。如果必须使用底层同步原语，只使用非递归互斥器和条件变量，慎用读写锁，不用信号量。
+
+## 互斥锁
+核心有三点：RAII wrapper完成加解锁、不使用recursive mutex、避免死锁。
+- RAII wrapper完成加解锁将锁的生效期等同于RAII wrapper的作用域，从而在根本上解决了忘记解锁的问题。
+- recursive mutex会掩盖可能会死锁的情况，使得程序可能大部分时间正常但偶尔crash。而non-recursive mutex会立即死锁，能更早更好的发现错误。
+- 发生死锁的根本在于持有资源和等待资源形成了环。要避免死锁，应该在写代码时思考调用栈上持有锁的情况，避免在持有锁A又需要再加锁B时刚好有可能另一线程持有锁B又会加锁A。要调试死锁，只需要打印调用栈，结合源码找出给同一个mutex上锁的情况加以分析。
+
+## 条件变量
+核心有两点：和mutex配合使用、使用wait的正确形式
+```
+std::mutex mtx;
+std::condition_variable cv;
+std::lock_guard<std::mutex> guard(mtx);
+// form 1:
+while (!test_condition) {
+  cv.wait(guard);
+}
+// form 2:
+cv.wait(guard, [&](){ return test_condtion; });
+```
+
+
