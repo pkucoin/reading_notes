@@ -8,7 +8,7 @@
 
 # 线程基础
 std::thread类是C++ 11对操作系统线程的一个wrapper类，其构造函数原型为：
-```
+```cpp
 template< class Function, class... Args > 
 explicit thread( Function&& f, Args&&... args );
 ```
