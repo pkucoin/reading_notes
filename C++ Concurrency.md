@@ -6,12 +6,63 @@
 
 # 并发概述
 
-# 线程基础
+# 线程对象基础
 std::thread类是C++ 11对操作系统线程的一个wrapper类，其构造函数原型为：
 ```cpp
 template< class Function, class... Args > 
 explicit thread( Function&& f, Args&&... args );
 ```
-看起来很眼熟？是的它和std::bind的函数原型很像，f是一个Callable的object，之后的模板参数包args通过std::forward转发，最终通过std::invoke调用。
+看起来很眼熟？是的它和std::bind的函数原型很像，f是一个Callable的object，模板参数包args通过std::forward转发，最终在另一个线程中通过std::invoke调用。以下是常见的创建一个线程对象的参数形式：
+```cpp
+std::thread t1; // t1 is not a thread
+std::thread t2(f1, n + 1); // pass by value
+std::thread t3(f2, std::ref(n)); // pass by reference
+std::thread t4(std::move(t3)); // t4 is now running f2(). t3 is no longer a thread
+std::thread t5(&Foo::bar, &foo); // t5 runs foo::bar() on object f
+std::thread t6(b); // t6 runs baz::operator() on object b
+//std::thread t7(baz()); // error, most vexing parse
+std::thread t7{baz()}; // or t7{baz{}} or t7(baz{})
+std::thread t8([](){ b(); }); // lambda
+```
 
+- 除了使用默认初始化的t1和被std::move移动构造到了t4的t3外，其他线程对象在构造函数完成后即创建线程开始执行，这称为“与一个系统线程关联”，或者“已关联线程对象”。
+- 线程对象不可以拷贝，但可以移动。移动可以转移线程对象与系统线程的关联关系，也支持了将线程对象置于容器内的用法。
+- 可以对已关联线程对象进行join()来等待其完成，或者detach()使其独立执行。只能对已关联线程对象执行一次join或detach，执行后joinable()会返回false
+- 线程对象的当线程对象析构时，如果与一个系统线程关联并且是joinable，但没有被join()或者detach()，则会调用std::terminate()终止程序。为了确保线程对象创建后一定被join/detach，可以利用RAII构造一个简单的wrapper类在析构函数中完成（相比而言还是Go的defer简洁好用呀）。
+```cpp
+// 一个支持移动、自动join的线程类
+class joining_thread
+{
+    std::thread t;
+public:
+    joining_thread() noexcept=default;
+    template<typename Callable,typename ... Args>
+    explicit joining_thread(Callable&& func,Args&& ... args):
+        t(std::forward<Callable>(func),std::forward<Args>(args)...) {}
+    explicit joining_thread(std::thread t_) noexcept: t(std::move(t_)) {}
+    joining_thread(joining_thread&& other) noexcept: t(std::move(other.t)) {}
+    joining_thread& operator=(joining_thread&& other) noexcept
+    {
+        if(joinable())
+            join();
+        t=std::move(other.t);
+        return *this;
+    }
+    joining_thread& operator=(std::thread other) noexcept
+    {
+        if(joinable())
+            join();
+        t=std::move(other);
+        return *this;
+    }
+    ~joining_thread() noexcept
+    {
+        if(joinable())
+            join();
+    }
+    // 省略若干成员函数
+    ...
+};
+```
 
+# 线程间共享数据
