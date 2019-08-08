@@ -71,3 +71,4 @@ public:
 - lock-free: 使用原子数据结构、CAS指令和内存模型，使修改对不同线程有正确的可见性
 - transaction_based: 使用事务，发生错误时回滚并重试
 
+mutex的名字解释了它的功能：任意时刻只有一个线程能够对其进行lock操作，从而使不同线程互斥。尝试对一个已经lock的mutex执行lock会导致当前线程
