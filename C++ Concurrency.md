@@ -66,9 +66,21 @@ public:
 ```
 
 # 线程间共享数据
-并发中的race condition指的是程序运行结果依赖于线程间操作的相对执行执行。避免race condition的方法主要有：
+并发中的race condition指的是程序运行结果依赖于线程间操作的相对执行顺序。避免race condition的方法主要有：
 - lock-based: 使用某种锁保护机制将数据保护起来，使得同一时刻只有一个操作线程可以修改数据
 - lock-free: 使用原子数据结构、CAS指令和内存模型，使修改对不同线程有正确的可见性
 - transaction_based: 使用事务，发生错误时回滚并重试
 
-mutex的名字解释了它的功能：任意时刻只有一个线程能够对其进行lock操作，从而使不同线程互斥。尝试对一个已经lock的mutex执行lock会导致当前线程
+mutex的lock与unlock
+- 线程A对mutex成功lock之后，另一个线程B尝试对这个已经lock的mutex执行lock会导致线程B阻塞直到lock成功，从而达到互斥目的
+- 线程A对mutex成功lock之后，线程A再次对该mutex调用lock是UB
+- 只有在本线程对mutex成功lock之后，才能由本线程对mutex调用unlock。如果本线程没有lock成功，或者mutex是由其他线程lock的，对mutex调用unlock是UB
+- 为了保证mutex在加锁后一定会被解锁，不应该直接调用mutex的lock和unlock，而应该选择合适的RAII wrapper，包括lock_guard,unique_lock等
+
+死锁的四个必要条件：
+- 资源互斥：同一时刻一个资源只有一个持有者可以持有
+- 持有等待：持有者持有资源的同时也在等待资源
+- 不可剥夺：除非持有者自己释放，持有者对资源的持有不可剥夺
+- 环形等待：资源持有者们等待资源的关系形成环
+
+在实际代码中一个直接的避免死锁的做法就是所有线程必须以相同的加锁顺序对mutex加锁，但实际中可能很难做到。std::lock提供了同时为多个mutex上锁
