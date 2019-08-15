@@ -77,12 +77,9 @@ public:
 - 线程A对mutex成功lock之后，另一个线程B尝试对这个已经lock的mutex执行lock会导致线程B阻塞直到lock成功，从而达到互斥目的
 - 线程A对mutex成功lock之后，线程A再次对该mutex调用lock是UB
 - 只有在本线程对mutex成功lock之后，才能由本线程对mutex调用unlock。如果本线程没有lock成功，或者mutex是由其他线程lock的，对mutex调用unlock是UB
-- 为了保证mutex在加锁后一定会被解锁，不应该直接调用mutex的lock和unlock，而应该选择合适的RAII wrapper，包括lock_guard,unique_lock等
+- 为了保证mutex在加锁后一定会被解锁，不应该直接调用mutex的lock和unlock，而应该选择合适的RAII wrapper，包括lock_guard,unique_lock, scoped_lock等
 - lock_guard是一个纯粹的mutex RAII wrapper，构造时lock()，析构时unlock()
-- 相比lock_guard，unique_lock提供了对mutex更精细的控制
-```cpp
-
-```
+- 相比lock_guard，unique_lock的构造函数提供了对mutex更精细的控制
 
 ## 死锁的四个必要条件：
 - 资源互斥：同一时刻一个资源只有一个持有者可以持有
@@ -94,5 +91,71 @@ public:
 - 在实际代码中一个直接的避免死锁的做法就是所有线程必须以相同的加锁顺序对mutex加锁，但实际中这可能很难保证
 - 在C++ 11中引入的std::lock()提供了一种使用死锁避免算法同时为多个mutex上锁的方法，在C++ 17中又引入了std::scoped_lock作为std::lock()的RAII wrapper
 - 书中介绍了一个层次锁的实现，通过锁的层次大小来限定上锁顺序来避免死锁
+```cpp
+// 一个交换例子，说明unique_lock和scoped_lock
+void swap(X& lhs, X& rhs)
+{
+    if(&lhs==&rhs)
+        return;
+    // 构造时不锁
+    std::unique_lock<std::mutex> lock_a(lhs.m, std::defer_lock);
+    std::unique_lock<std::mutex> lock_b(rhs.m, std::defer_lock);
+    std::lock(lock_a,lock_b);
+    swap(lhs.some_detail,rhs.some_detail);
+    // 构造时当前线程已经取得了锁的所有权
+    std::lock(lhs.m,rhs.m);
+    std::lock_guard<std::mutex> lock_a(lhs.m,std::adopt_lock);
+    std::lock_guard<std::mutex> lock_b(rhs.m,std::adopt_lock);
+    swap(lhs.some_detail,rhs.some_detail);
+    // 更简洁的写法：使用scoped_lock与类模板实参推导
+    std::scoped_lock guard(lhs.m,rhs.m); // 省略了模板类型参数
+    swap(lhs.some_detail,rhs.some_detail);
+}
+```
 
-
+## 初始化数据的多线程保护
+对于数据初始化的多线程保护最好的例子是单例模式。单线程下单例模式示例代码:
+```cpp
+class Singleton {
+public:
+    static Singleton* getInstance() {
+        if (!inst) {
+            inst = new Singletion();
+        }
+        return inst;
+    }
+private:
+    Singleton();
+    ~Singleton();
+    static Singleton* inst;
+};
+```
+直接改写成多线程：
+```cpp
+    static Singleton* getInstance() {
+        std::lock_guard<std::mutex> lck(mtx);
+        if (!inst) {
+            inst = new Singletion();
+        }
+        return inst;
+    }
+```
+这样写最大的问题是每次调用getInstance都会进入临界区。为了解决这个问题出现了Double-Checked Locking的写法：
+```cpp
+    static Singleton* getInstance() {
+        if (!inst) {
+            std::lock_guard<std::mutex> lck(mtx);
+            if (!inst) {
+                inst = new Singletion();
+            }
+        }
+        return inst;
+    }
+```
+初看起来这样写没有问题。但```inst = new Singletion();```这一句存在一个微妙的问题：
+- new实际是一个包含3个步骤的过程
+    - 1. 申请内存空间
+    - 2. 在申请到的内存空间上完成对象构造
+    - 3. 将inst指向申请到的内存起始地址
+- 尽管使用了锁，但是CPU乱序执行仍然可能使2和3乱序，从而可能导致当线程A完成步骤1后先执行了3然后才执行2
+- 此时线程B可能观察到inst已非空，从而返回的inst指针指向还未完成对象构造的内存空间
