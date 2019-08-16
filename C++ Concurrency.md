@@ -2,8 +2,6 @@
 
 这里记录对C++并发的学习，学习材料主要是《C++ Concurrency in Action，2nd Edition》和cppreference.com。两者均没有质量能看的中文版本，所以看的都是英文原版。看到了不少对前者质量的争议，但是总的来说并没有看到什么基础的、常识的或者直接违背标准的错误，而直接以modern C++为基础系统介绍并发的书籍甚少，perfbook也推荐了这一本，所以还是值得一学的。cppreference.com可以看做C++标准说人话的版本加上质量不错的示例，是学习时看到语焉不详的地方时一个不错的补充。
 
-
-
 不同于纯粹的编程语言语法学习，学习并发本身需要对操作系统中的进程、线程、锁以及体系结构中CPU Cache、指令重排等基础知识也有一定了解。当然，我认为学习并发的目的只是为了能在业务并发层面有所精进，并不是为了写内核、编译器、基础库这一级别的代码，所以很多内容点到为止即可。
 
 # 并发概述
@@ -76,7 +74,7 @@ public:
 ## mutex的lock与unlock
 - 线程A对mutex成功lock之后，另一个线程B尝试对这个已经lock的mutex执行lock会导致线程B阻塞直到lock成功，从而达到互斥目的
 - 线程A对mutex成功lock之后，线程A再次对该mutex调用lock是UB
-- 只有在本线程对mutex成功lock之后，才能由本线程对mutex调用unlock。如果本线程没有lock成功，或者mutex是由其他线程lock的，对mutex调用unlock是UB
+- 只有在本线程对mutex成功lock之后，才能由本线程对mutex调用unlock。如果本线程没有lock成功，或者mutex是由其他线程lock的，此时由本线程对mutex调用unlock是UB
 - 为了保证mutex在加锁后一定会被解锁，不应该直接调用mutex的lock和unlock，而应该选择合适的RAII wrapper，包括lock_guard,unique_lock, scoped_lock等
 - lock_guard是一个纯粹的mutex RAII wrapper，构造时lock()，析构时unlock()
 - 相比lock_guard，unique_lock的构造函数提供了对mutex更精细的控制
@@ -114,7 +112,7 @@ void swap(X& lhs, X& rhs)
 ```
 
 ## 初始化数据的多线程保护
-对于数据初始化的多线程保护最好的例子是单例模式。单线程下单例模式示例代码:
+对于数据初始化的多线程保护最好的例子是lazy-init的单例模式。Meyers在2004年的《C++ and the Perils of Double-Checked Locking》一文中详细讨论了这一问题。首先在单线程下lazy_init的单例模式示例代码:
 ```cpp
 class Singleton {
 public:
@@ -135,27 +133,50 @@ private:
     static Singleton* getInstance() {
         std::lock_guard<std::mutex> lck(mtx);
         if (!inst) {
-            inst = new Singletion();
+            inst = new Singleton();
         }
         return inst;
     }
 ```
-这样写最大的问题是每次调用getInstance都会进入临界区。为了解决这个问题出现了Double-Checked Locking的写法：
+这样写最大的问题是每次调用getInstance都会进入临界区，而实际上只要第一个线程完成了inst的初始化，之后的线程发现inst非空就不需要再进入临界区。于是出现了Double-Checked Locking的写法：
 ```cpp
     static Singleton* getInstance() {
         if (!inst) {
             std::lock_guard<std::mutex> lck(mtx);
             if (!inst) {
-                inst = new Singletion();
+                inst = new Singleton();
             }
         }
         return inst;
     }
 ```
-初看起来这样写没有问题。但```inst = new Singletion();```这一句存在一个微妙的问题：
+初看起来这样写没有问题。但```inst = new Singleton();```这一句存在一个微妙的问题：
 - new实际是一个包含3个步骤的过程
     - 1. 申请内存空间
     - 2. 在申请到的内存空间上完成对象构造
     - 3. 将inst指向申请到的内存起始地址
-- 尽管使用了锁，但是CPU乱序执行仍然可能使2和3乱序，从而可能导致当线程A完成步骤1后先执行了3然后才执行2
-- 此时线程B可能观察到inst已非空，从而返回的inst指针指向还未完成对象构造的内存空间
+- 指令重排仍然可能使2和3交换次序，从而导致当线程A完成步骤1后先执行了3然后才执行2
+- 此时另一个线程B可能观察到inst已非空，从而直接返回了inst指针，而此时inst指向还未完成对象构造的内存空间
+- 所有希望通过加入volatile关键字来得到正确的多线程语义的方法都是错误的
+- 可以通过加入memory barrier来改写这段程序使其获得正确的语义
+
+由此可见，在C++ 11之前写出一个正确的lazy-init的单例模式并不容易。而在C++ 11之后，有两种简洁的写法可以达到目的，一种是使用静态局部变量，其线程安全来自于C++ 11标准规定：*If control enters the declaration concurrently while the variable is being initialized, the concurrent execution shall wait for completion of the initialization.* 
+```cpp
+    static Singleton* getInstance() {
+        static Singleton* inst = new Singleton();
+        return inst;
+    }
+```
+另一种是使用call_once（类似于pthread_once）和once_flag，call_once保证即使有多个线程同时执行，被调用函数也只会执行一次
+
+```cpp
+    static Singleton* getInstance() {
+        std::call_once(init_flag, ()[]{ inst = new Singleton(); });
+        return inst;
+    }
+private:
+    static std::once_flag init_flag;
+```
+
+## volatile
+这可能是被误解最多的C++关键字了。
