@@ -199,4 +199,31 @@ b = *p // 这里，不应该将其优化为b = a;
 最重要的是，上述限制都是针对单线程模型而言的。C++中volatile与线程安全没有任何关系。将变量声明为volatile，不使用其他同步手段就进行多线程读写是UB。
 
 ## 读写锁
-在读多写少的应用场景中，每次读也使用互斥锁造成了不必要的锁争用开销。读写锁的设计便是为了解决这一问题：同一时刻它仍然只允许一个写线程修改数据，但是允许多个读线程同时读取数据。
+在读多写少的应用场景中，每次读也使用互斥锁造成了不必要的锁争用开销。读写锁的设计便是为了解决这一问题：同一时刻它仍然只允许一个写线程修改数据，但是允许多个读线程同时读取数据。std::shared_timed_mutex和std::shared_mutex通过lock和lock_shared分别提供独占锁和共享锁来满足读写锁的要求，std::shared_lock是其RAII wrapper。
+```cpp
+class dns_entry;
+class dns_cache
+{
+    std::map<std::string,dns_entry> entries;
+    // 用于保护只读接口时，接口声明为const锁声明为mutable是best pratice
+    // 这里多说一句mutable，const
+    mutable std::shared_mutex entry_mutex; 
+public:
+    dns_entry find_entry(std::string const& domain) const
+    {
+        std::shared_lock<std::shared_mutex> lk(entry_mutex);
+        std::map<std::string,dns_entry>::const_iterator const it = entries.find(domain);
+        return (it == entries.end()) ? dns_entry() : it->second;
+    }
+    void update_or_add_entry(std::string const& domain, dns_entry const& dns_details)
+    {
+        std::lock_guard<std::shared_mutex> lk(entry_mutex);
+        entries[domain] = dns_details;
+    }
+};
+```
+## 递归锁
+best practice: 不应该使用递归锁。
+
+# 同步并发操作
+上一章讨论的是如何保护线程间的共享数据以避免race condition。而很多时候我们不仅仅需要保护共享数据，还需要同步线程间的操作。C++为此提供了condition variable和future
