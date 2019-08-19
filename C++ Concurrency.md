@@ -226,4 +226,42 @@ public:
 best practice: 不应该使用递归锁。
 
 # 同步并发操作
-上一章讨论的是如何保护线程间的共享数据以避免race condition。而很多时候我们不仅仅需要保护共享数据，还需要同步线程间的操作。C++为此提供了condition variable和future
+上一章讨论的是如何保护线程间的共享数据以避免race condition。而很多时候我们不仅仅需要保护共享数据，还需要同步线程间的操作，C++为此提供了condition_variable和future。
+
+## 等待事件或条件
+多线程环境中，如果一个线程A想等待另一个线程B发出的一个事件或者修改的一个条件，最直接的想法是设定一个共享变量，由B负责修改该变量，而A轮询这个变量直到事件发出或者条件成立。
+```cpp
+void wait_for_flag()
+{
+    std::unique_lock<std::mutex> lk(m);
+    while(!flag)
+    {
+        // 注意轮询时不能一直持有保护共享变量的锁，否则线程B无法修改。
+        lk.unlock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        lk.lock();
+    }
+}
+```
+condition_variable为这个应用场景提供了一个优化的wait-notify方案：线程A发现条件不成立后，会阻塞当前线程并在条件变量上等待，直到线程B显式地通过条件变量通知等待线程条件成立时再继续执行。
+```cpp
+    std::condition_variable cv;
+    std::mutex cv_m; // 既保护共享数据flag，也为了cv
+    bool flag = false;
+    
+    // 线程A
+    std::unique_lock<std::mutex> lk(cv_m);
+    cv.wait(lk, []() { return flag } );
+    
+    // 线程B
+    std::unique_lock<std::mutex> lk(cv_m);
+    flag = true;
+    cv.notify_one();
+```
+这里需要注意的是：
+- cv.wait()实际上是原子地执行以下操作
+    - lk.unlock()
+    - 将当前线程加入到等待在该条件变量上的线程列表中
+    - 阻塞当前线程执行直到该条件变量调用notify_one/notify_all
+- cv可能会被虚假唤醒，即阻塞结束时可能条件仍不成立，故如果使用cv.wait(lock)的形式时，必须使用while而不是if进行条件判断
+- cv被唤醒后，重新
