@@ -228,7 +228,7 @@ best practice: 不应该使用递归锁。
 # 同步并发操作
 上一章讨论的是如何保护线程间的共享数据以避免race condition。而很多时候我们不仅仅需要保护共享数据，还需要同步线程间的操作，C++为此提供了condition_variable和future。
 
-## 等待事件或条件
+## 等待一次性事件或条件
 多线程环境中，如果一个线程A想等待另一个线程B发出的一个事件或者修改的一个条件，最直接的想法是设定一个共享变量，由B负责修改该变量，而A轮询这个变量直到事件发出或者条件成立。
 ```cpp
 void wait_for_flag()
@@ -247,7 +247,7 @@ condition_variable为这个应用场景提供了一个优化的wait-notify方案
 ```cpp
     std::condition_variable cv;
     std::mutex cv_m; // 既保护共享数据flag，也为了cv
-    bool flag = false;
+    bool flag = false; // 即使将其换成atmoic<bool>，修改也必须配合互斥锁
     
     // 线程A
     std::unique_lock<std::mutex> lk(cv_m);
@@ -259,9 +259,60 @@ condition_variable为这个应用场景提供了一个优化的wait-notify方案
     cv.notify_one();
 ```
 这里需要注意的是：
-- cv.wait()实际上是原子地执行以下操作
+- cv.wait(lk, pred)在条件满足时直接继续执行。在条件不满足时，实际上是原子地执行以下操作：
     - lk.unlock()
     - 将当前线程加入到等待在该条件变量上的线程列表中
-    - 阻塞当前线程执行直到该条件变量调用notify_one/notify_all
-- cv可能会被虚假唤醒，即阻塞结束时可能条件仍不成立，故如果使用cv.wait(lock)的形式时，必须使用while而不是if进行条件判断
-- cv被唤醒后，重新
+    - 阻塞当前线程执行直到被唤醒
+- cv在得到notify被唤醒后：
+    - 线程结束阻塞，重新获取mutex锁
+    - 检查pred，如果成立，
+    - cv也可能会被虚假唤醒，即阻塞结束时pred可能仍不成立，故如果使用cv.wait(lock)的形式时，必须使用while而不是if进行条件判断
+    - 如果发现是虚假唤醒，再次执行wait在条件不满足时的操作
+    - 也正因为虚假唤醒的存在，pred应该尽量简单且没有side effects
+- 条件变量适合“等待一次”的线程同步场景，当条件满足后线程不会再次wait
+
+## future与异步并发
+根据对异步任务控制层次的不同，C++将异步任务抽象为async, packaged_task和promise（抽象层次逐渐变低，控制逐渐精细）。future提供了一种从这些异步任务获取结果的统一机制：
+- 异步任务的创建者可以从异步任务拿到一个future对象
+- 然后可以通过该future对象查询、等待、获取一个值，在此过程中如果值还没有准备好，则会阻塞
+- 异步任务完成后，通过返回值或者显式地设置future的值来发送结果
+
+```cpp
+    // future from a packaged_task
+    std::packaged_task<int()> task([]{ return 7; }); // wrap the function
+    std::future<int> f1 = task.get_future();  // get a future
+    std::thread t(std::move(task)); // launch on a thread
+ 
+    // future from an async()
+    std::future<int> f2 = std::async(std::launch::async, []{ return 8; });
+ 
+    // future from a promise
+    std::promise<int> p;
+    std::future<int> f3 = p.get_future();
+    std::thread( [&p]{ p.set_value_at_thread_exit(9); }).detach();
+ 
+    std::cout << "Waiting..." << std::flush;
+    f1.wait();
+    f2.wait();
+    f3.wait();
+    std::cout << "Done!\nResults are: "
+              << f1.get() << ' ' << f2.get() << ' ' << f3.get() << '\n';
+    t.join();
+```
+### std::async
+```cpp
+std::future<> async(std::launch policy, Function&& f, Args&&... args)
+```
+async抽象的是一个简单的异步任务，只需要提供Callable对象及其参数，就会开始后台执行，同时创建者从返回值处获得一个future对象用于获取返回值。
+- policy参数为std::launch::async时，会在一个新的线程中异步执行
+- policy参数为std::launch::deferred时，当第一次对future对象调用wait时在当前线程中执行
+- 未指定policy时实际为std::launch::async | std::launch::deferred
+
+### std::packaged_task
+packaged_task是一个Callable对象和future对象的wrapper，通过get_future()将future对象返回给创建者。packaged_task对象在创建后不会马上执行，需要显式invoke。可以将packaged_task对象move给thread对象以达到在指定thread中在需要的时刻异步执行并通过future获得结果。
+
+### std::promise
+promise是最底层的异步结果获取机制。promise对象本身可以作为一个参数在线程间传递，并像线程间的管道一样工作：在发送端set_value()，而在另一端通过promise的future对象get()。相比async和packaged_task，promise这种模式为在异步任务间传递结果提供了最大的灵活性。promise不仅可以传递值，还可以通过set_exception()传递异常，在get()端通过try-catch即可捕获。
+
+### std:shared_future
+future从设计上只适合一个线程等待一个一次性事件。如果想要多个线程等待同一个一次性事件，需要使用shared_future。shared_future对象不仅可以移动，还可以拷贝。可以将
