@@ -26,7 +26,33 @@ int a = {0.1}; // error: narrowing conversion of ‘1.0000000000000001e-1’ fro
 
 ## 2.3 复合类型
 本节所说的引用均指左值引用。
-- 引用即别名。引用并不是一个对象，只是为一个已存在对象所起的另一个名字
+- 引用即别名。引用并不是一个对象，只是为一个已存在对象所起的另一个名字。引用在定义后不能再绑定另一个对象。
 - 指针point to对象。指针本身也是一个对象，允许赋值拷贝，可以指向不同对象，无须赋初值
 - 指针与引用，大部分情况下都需要与指向对象的类型一致
 - nullptr是一个特殊指针类型（std::nullptr_t）的字面值，NULL是一个定义为0的预编译宏。
+```cpp
+void f(int *pi)
+{
+   std::cout << "Pointer to integer overload\n";
+}
+void f(double *pd)
+{
+   std::cout << "Pointer to double overload\n";
+} 
+void f(std::nullptr_t nullp)
+{
+   std::cout << "null pointer overload\n";
+}
+
+f(0); // error: call of overloaded ‘f(int)’ is ambiguous
+f(NULL); // error: call of overloaded ‘f(NULL)’ is ambiguous
+f(nullptr); // output: null pointer overload
+```
+
+## 2.4 const
+- 顶层const表示对象本身不能直接被修改，底层const表示对象不能通过指针或引用等方式间接修改
+```cpp
+int q = 10;
+const int* const p = &q; // 左边是底层const，限制不能通过指针p来修改q；右边是顶层const，限制不能修改指针p本身（如上所述，指针也是对象）。
+```
+- constexpr
