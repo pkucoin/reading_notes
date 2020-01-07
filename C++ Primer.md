@@ -55,4 +55,10 @@ f(nullptr); // output: null pointer overload
 int q = 10;
 const int* const p = &q; // 左边是底层const，限制不能通过指针p来修改q；右边是顶层const，限制不能修改指针p本身（如上所述，指针也是对象）。
 ```
-- constexpr
+- constexpr指针是一个常量指针，类似于顶层const。
+
+## 2.5 处理类型
+- 正确阅读typedef
+```cpp
+typedef int (*add_integer)(int, int);
+```
