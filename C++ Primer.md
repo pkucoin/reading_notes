@@ -1,4 +1,4 @@
-对于这种大而全的大部头书，写读书笔记并不希望变成逐章节的摘抄，而是希望扔掉那些不重要或已经烂熟于心的点，记录最重要或者不了解的点。此外，C++ 11的不少内容在Effective Modern C++中有更详细的阐释，这里不过多展开。
+对于这种大而全的大部头书，写读书笔记并不希望变成逐章节的摘抄，而是希望扔掉那些不重要或已经烂熟于心的点，记录最重要或者不了解的点。书中一些知识点的实例不如cppreference.com，故从cppreference.com摘录了一些。此外，C++ 11的不少内容在Effective Modern C++中有更详细的阐释，这里不过多展开。
 
 # 2. 变量与基本类型
 ## 2.1 基本内置类型
@@ -60,8 +60,6 @@ const int* const p = &q; // 左边是底层const，限制不能通过指针p来�
 ## 2.5 处理类型
 - 正确阅读别名。typedef的语法相对晦涩，使用对应的using会清晰不少。using支持模板别名而typedef不支持。
 ```cpp
-//https://en.cppreference.com/w/cpp/language/typedef
-
 // simple typedef
 typedef unsigned long ulong;
 using ulong = unsigned long;
@@ -147,3 +145,118 @@ int (*Parray)[10] = &arr; // Parray指向一个包含10个整数的数组
 int &refs[10]; // error: 不存在引用数组
 int (&arrRef)[10] = arr; // arrRef引用一个含有10个整数的数组
 ```
+- 内置数组下标可以是负数
+```cpp
+int a[] = {0, 2, 4, 6, 8};
+int *p = &a[2];
+p[-2]; // ia[0]
+```
+- string的c_str()方法返回的常量字符串指针生命期与string对象一致，可能会失效/变化。
+
+## 3.6 多维数组
+- 范围for语句遍历多维数组需要引用类型的控制变量
+
+# 4. 表达式
+## 4.1 基础
+- 对象被用作左值时，用的是对象的身份（在内存中的位置）；被用作右值时，用的是对象的值（内容）
+- 只有&&、||、?:、,四种运算符明确规定了求值顺序。在一条表达式中的一处改变了运算对象的值，其他地方不要再使用该运算对象，否则就可能产生UB
+## 4.2 算术运算符
+- 运算符规则
+```cpp
+m % (-n) == m % n;
+(-m) % n == - (m % n);
+```
+## 4.3 逻辑和关系运算符
+- 不要与true和false进行比较运算
+
+## 4.4 赋值运算符
+- 赋值运算符优先级较低
+```cpp
+while ((i = next_num()) != 42) {
+   ...
+}
+```
+
+## 4.5 递增和递减运算符
+- 后置版本需要将原始值保存以便返回，这会有额外开销。除非必须，否则不适用后置版本
+- 防止因为改变对象而产生的UB
+```cpp
+*beg++ // 等价于 *(begin++) ，也等价于 返回*begin然后++begin
+*beg = *beg++; // 先求左侧还是右侧的值会导致不同的结果。UB
+```
+
+## 4.6 成员访问运算符
+## 4.7 条件运算符
+## 4.8 位运算符
+## 4.9 sizeof运算符
+- sizeof(\*ptr)在ptr有类型但为空时也是安全的
+- sizeof(MyDataClass::data)
+## 4.10 逗号运算符
+## 4.11 类型转换
+- 隐式转换
+- 显式转换。dynamic_cast留到19.2节中介绍
+```cpp
+// static_cast用于具有明确定义的、非底层const的类型转换
+double slope = static_cast<double>(j) / i;
+void *p = &d;
+double *dp = static_cast<double*>(p);
+
+// const_cast用于改变运算对象的底层const。但不能通过其对常量对象进行写，也不能操作函数指针。
+struct type {
+    int i;
+    type(): i(3) {}
+    void f(int v) const {
+        // this->i = v;                 // compile error: this is a pointer to const
+        const_cast<type*>(this)->i = v; // OK as long as the type object isn't const
+    }
+};
+type t; // if this was const type t, then t.f(4) would be undefined behavior
+t.f(4);
+
+void (type::* pmf)(int) const = &type::f; // pointer to member function
+// const_cast<void(type::*)(int)>(pmf);   // compile error: const_cast does not work on function pointers
+                                        
+const int j = 3; // j is declared const
+int* pj = const_cast<int*>(&j);
+// *pj = 4;      // undefined behavior
+
+// reinterpret_cast converts between types by reinterpreting the underlying bit pattern
+int f() { return 42; }
+int i = 7;
+
+// pointer to integer and back
+std::uintptr_t v1 = reinterpret_cast<std::uintptr_t>(&i); // static_cast is an error
+int* p1 = reinterpret_cast<int*>(v1);
+assert(p1 == &i);
+
+// pointer to function to another and back
+void(*fp1)() = reinterpret_cast<void(*)()>(f);
+// fp1(); undefined behavior
+int(*fp2)() = reinterpret_cast<int(*)()>(fp1);
+std::cout << std::dec << fp2() << '\n'; // safe
+
+// type aliasing through pointer
+char* p2 = reinterpret_cast<char*>(&i);
+if(p2[0] == '\x7')
+  std::cout << "This system is little-endian\n";
+else
+  std::cout << "This system is big-endian\n";
+
+// type aliasing through reference
+reinterpret_cast<unsigned int&>(i) = 42;
+std::cout << i << '\n';
+```
+## 4.12 运算符优先级表
+
+# 5. 语句
+## 5.1 简单语句
+## 5.2 语句作用域
+## 5.3 条件语句
+- 在switch的case标签内如果需要定义变量，应该定义在块内已保证作用域正确。
+## 5.4 循环
+## 5.5 跳转语句
+- 除了用于跳出多层循环外，不应使用goto
+## 5.6 try语句块和异常处理
+
+# 6. 函数
+## 6.1 函数基础
