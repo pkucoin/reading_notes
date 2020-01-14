@@ -260,3 +260,16 @@ std::cout << i << '\n';
 
 # 6. 函数
 ## 6.1 函数基础
+- 局部静态变量在程序的执行路径第一次经过对象定义语句时初始化（该初始化是线程安全的），直到程序终止才被销毁。
+
+## 6.2 参数传递
+- 应该把函数不会改变的形参定义成常量引用。定义成普通引用的形参会极大限制实参类型。
+```cpp
+int fun(int &s) { return 0; }
+int foobar(const int &s) { return 1; }
+int i = 0;
+const int ci = i;
+string::size_type ctr = 0;
+fun(ci), fun(42), fun(ctr); // error
+foobar(i), foobar(ci), foobar(42), foobar(ctr); // pass
+```
