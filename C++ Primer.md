@@ -273,3 +273,32 @@ string::size_type ctr = 0;
 fun(ci), fun(42), fun(ctr); // error
 foobar(i), foobar(ci), foobar(42), foobar(ctr); // pass
 ```
+- 数组作为形参
+```cpp
+// 以下三种形式，后两者等价于第一种
+void fun(const int* a);
+void fun(const int[] a);
+void fun(const int[10] a);
+
+// 注意括号在指向数组的指针/引用的位置
+void fun(int *arr[10]); // arr是一个数组，大小为10，类型为整数指针
+void fun(int (*arr)[10]); // arr是一个指针，指向含有10个整数的数组
+void fun(int (&arr)[10]); // arr是一个引用，绑定到含有10个整数的数组
+void fun(int &arr[10]); // error: 没有引用数组
+```
+
+- initializer_list是一种轻量级的代理对象，用于提供对const T类型的对象数组的访问。花括号初始化列表会在对象列表初始化、赋值运算符的右操作数、函数参数、auto、范围for（并且能够进行构造）时自动构造成initializer_list。
+```cpp
+```
+
+# 6.3 返回类型和return语句
+- 可以使用尾置返回类型或decltype来简化复杂返回类型的函数
+```cpp
+// 以下函数声明等价
+int (*func(int i))[10];
+auto func(int i) -> int(*)[10];
+int a[10];
+decltype(a) *func(int i);
+```
+
+# 6.4 函数重载
