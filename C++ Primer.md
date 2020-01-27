@@ -343,4 +343,27 @@ Sales_data() = default;
 - class和struct定义类唯一的区别就是成员的默认访问权限
 
 ## 7.3 类的其他特性
-- 
+- mutable成员在const成员函数中也可以被修改（一个有实际意义的用法是作为保护类成员访问的mutex通常声明为mutable）
+- 类内初始值必须使用=或{}的初始化形式
+- const成员函数
+```cpp
+class Screen {
+   int r, c;
+public:
+   const Screen &display() const { cout << "const called" << endl; return *this; } 
+   Screen &display() { cout << "nonconst called" << endl; return *this; }
+   void set(int _r, int _c) { r = _r; c = _c; }
+};
+
+Screen screen;
+// 如果只有const版本的display，那么display返回的*this是一个常量引用，不能set
+screen.display().set(3, 2);
+
+const Screen const_screen;
+// display会根据调用对象是否是const来重载，输出const called
+const_screen.display();
+```
+- 前向声明的类在声明后定义之前是一个不完全类型，此时可以定义该类型的指针或引用，声明以该类型为形参类型/返回类型的函数
+- 友元没有传递性
+
+## 7.4 类的作用域
