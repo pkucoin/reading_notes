@@ -370,3 +370,79 @@ const_screen.display();
 - 编译器处理完类中的全部声明后才会处理成员函数的定义
 
 ## 7.5 构造函数再探
+- 使用构造函数初始值列表好于先定义然后在构造函数中赋值，原因包括：
+  - 省去了一次默认初始化过程
+  - 对于const， 引用，或没有默认构造函数的类类型，不能先定义然后赋值
+- 成员的初始化顺序与其在初始值列表出现的顺序无关，只与成员的声明顺序一致
+- 委托构造函数会先执行受委托的构造函数的初始值列表和函数体，然后才执行自身的函数体
+- 默认初始化：参见以下用例中的语法
+```cpp
+struct T1 { int mem; };
+ 
+struct T2
+{
+    int mem;
+    T2() { } // "mem" is not in the initializer list
+};
+
+int n; // static non-class, a two-phase initialization is done:
+       // 1) zero initialization initializes n to zero
+       // 2) default initialization does nothing, leaving n being zero
+ 
+int main()
+{
+    int n;            // non-class, the value is indeterminate
+    std::string s;    // class, calls default ctor, the value is "" (empty string)
+    std::string a[2]; // array, default-initializes the elements, the value is {"", ""}
+//  int& r;           // error: a reference
+//  const int n;      // error: a const non-class
+//  const T1 t1;      // error: const class with implicit default ctor
+    T1 t1;            // class, calls implicit default ctor
+    const T2 t2;      // const class, calls the user-provided default ctor
+                      // t2.mem is default-initialized (to indeterminate value)
+}
+```
+- 值初始化：参见以下用例中的语法
+```cpp
+struct T1
+{
+    int mem1;
+    std::string mem2;
+}; // implicit default constructor
+ 
+struct T2
+{
+    int mem1;
+    std::string mem2;
+    T2(const T2&) { } // user-provided copy constructor
+};                    // no default constructor
+ 
+struct T3
+{
+    int mem1;
+    std::string mem2;
+    T3() { } // user-provided default constructor
+};
+ 
+std::string s{}; // class => default-initialization, the value is ""
+ 
+int main()
+{
+    // int n();             // n is a function that has no args and return int
+    int n{};                // scalar => zero-initialization, the value is 0
+    double f = double();    // scalar => zero-initialization, the value is 0.0
+    int* a = new int[10](); // array => value-initialization of each element
+                            //          the value of each element is 0
+    T1 t1{};                // class with implicit default constructor =>
+                            //     t1.mem1 is zero-initialized, the value is 0
+                            //     t1.mem2 is default-initialized, the value is ""
+//  T2 t2{};                // error: class with no default constructor
+    T3 t3{};                // class with user-provided default constructor =>
+                            //     t3.mem1 is default-initialized to indeterminate value
+                            //     t3.mem2 is default-initialized, the value is ""
+    std::vector<int> v(3);  // value-initialization of each element
+                            // the value of each element is 0
+}
+```
+- 内置类型的默认初始化值是未确定值，大部分情况下直接使用该值；而内置类型的值初始化会是0
+
