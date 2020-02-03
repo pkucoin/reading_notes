@@ -479,4 +479,24 @@ int main()
 - string与数值互转：to_string, sto(d|i|l|f)
 
 ## 9.6 容器适配器
-- 
+- adpator接受一种已有的容器类型，使其行为看起来像一种不同的类型
+
+# 10. 泛型算法
+## 10.1 概述
+- 泛型算法不会执行容器操作，只执行迭代器的操作。故泛型算法不会添加或删除容器内元素
+
+## 10.2 初识泛型算法
+
+## 10.3 定制操作
+```cpp
+int n = 42;
+auto f = [n](ostream &os, string &func_name) mutable -> int { os << "func " + func_name + " called: " << ++n << endl; return n; }; // 值捕获的变量默认以const方式传递，不能改变其值。如果不加mutable则会编译报错。
+n = 0;
+f(cout, string("f")); // output: func f called: 43。以声明时捕获的值为准
+f(cout, string("f"));
+cout << n << endl; // 0。值捕获不会改变被捕获变量的值
+auto g = bind(f, ref(cout), placeholders::_1);
+g(string("g")); // output: func g called: 44。在第一次加1的结果43的基础上再加1
+```
+
+## 
