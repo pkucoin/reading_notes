@@ -499,4 +499,42 @@ auto g = bind(f, ref(cout), placeholders::_1);
 g(string("g")); // output: func g called: 44。在第一次加1的结果43的基础上再加1
 ```
 
-## 
+## 10.4 再探迭代器
+## 10.5 泛型算法结构
+## 10.6 特定容器算法
+- 链表（list和forward_list）有自己的sort，merge，remove，reverse和unique
+
+# 11. 关联容器
+## 11.1 使用关联容器
+## 11.2 关联容器概述
+- 有序关联容器的关键字类型需要定义一个严格弱序的<运算符
+## 11.3 关联容器操作
+```cpp
+// map迭代器指向一个pair，其值可以改变，但其关键字不能改变
+map<string, int> m = {{pre", 1}};
+auto m_it = m.begin();
+//m_it->first = "after"; // error
+m_it->second = 2;
+// set也不能通过迭代器修改关键字
+set<int> s = {1};
+auto s_it = s.begin();
+//*s_it = 2; // error
+// insert的返回值是一个pair，second是插入是否成功，first是插入成功后指向该元素的迭代器
+auto ret = m.insert({"pre", 2}); // ret type: pair<map<string, int>::iterator, bool>
+// 使用不存在的关键字作为下标会导致具有该关键字的元素添加到map中
+if (m["after"] == 1) {
+   // m : {{"pre", 1}, {"after", 0}}
+}
+// 使用equal_range查找可重复关联容器中所有具有特定关键字的元素
+multimap<string, int> mm = {{"pre", 1}, {"pre", 2}};
+auto pos = mm.equal_range("pre"); // pos是一个pair，内容是一对迭代器，分别对应lower_bound和upper_bound的结果
+```
+
+## 11.4 无序容器
+```cpp
+// 自定义类型的无序容器定义
+unordered_set<MyType, decltype(hasher)*, decltype(eqOp)*> us;
+```
+
+# 12. 动态内存
+## 12.1 动态内存与智能指针
