@@ -488,6 +488,7 @@ int main()
 ## 10.2 初识泛型算法
 
 ## 10.3 定制操作
+- 从实现上说，lambda函数会创建一个对应的匿名对象，其成员是捕获的变量，变量以lambda声明时的方式（值传递/引用传递）初始化，其值为lambda声明时变量的值；其成员函数是operator()的重载函数，函数体是该lambda函数，默认为const成员函数。
 ```cpp
 int n = 42;
 auto f = [n](ostream &os, string &func_name) mutable -> int { os << "func " + func_name + " called: " << ++n << endl; return n; }; // 值捕获的变量默认以const方式传递，不能改变其值。如果不加mutable则会编译报错。
@@ -538,3 +539,13 @@ unordered_set<MyType, decltype(hasher)*, decltype(eqOp)*> us;
 
 # 12. 动态内存
 ## 12.1 动态内存与智能指针
+- shared_ptr的创建和基本使用
+```cpp
+// 使用make_shared创建shared_ptr
+shared_ptr<string> p = make_shared<string>(10, '9');
+auto q = make_shared<string>("42");
+p = q; // 调用string(10, '9')的析构函数，并释放内存
+vector<shared_ptr<string>> vs;
+vs.push_back(p); // "42"一直存在直到被从vs中erase掉或vs的生存期结束
+```
+- shared_ptr
