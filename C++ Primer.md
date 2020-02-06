@@ -548,4 +548,18 @@ p = q; // 调用string(10, '9')的析构函数，并释放内存
 vector<shared_ptr<string>> vs;
 vs.push_back(p); // "42"一直存在直到被从vs中erase掉或vs的生存期结束
 ```
-- shared_ptr
+- shared_ptr多用于让多个对象能够共享一份数据
+- 使用new和delete直接管理内存容易出错
+```cpp
+string *ps1 = new string; // 默认初始化，空string
+string *ps2 = new string(); // 值初始化，空string
+string *ps3 = new string(3, '9'); // 调用string的构造函数，"999"
+int *pi1 = new int; // 默认初始化，未定义的值
+int *pi2 = new int(); // 值初始化，0
+auto pi3 = new const int(42); // pi3是一个指向const int的指针（const int*）
+auto po = new (nothrow) MyObject; // placement new，nothrow告诉new失败不抛出bad_alloc异常，返回空指针
+shared_ptr<int> pi4(new int(42)); // 接受指针参数的构造函数是explicit的
+process(pi4); // ok
+process(shared_ptr<int>(pi2)); // 危险，混用了普通指针和shared_ptr
+
+```
