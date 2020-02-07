@@ -559,7 +559,65 @@ int *pi2 = new int(); // 值初始化，0
 auto pi3 = new const int(42); // pi3是一个指向const int的指针（const int*）
 auto po = new (nothrow) MyObject; // placement new，nothrow告诉new失败不抛出bad_alloc异常，返回空指针
 shared_ptr<int> pi4(new int(42)); // 接受指针参数的构造函数是explicit的
+void process(shared_ptr<int> ptr);
 process(pi4); // ok
-process(shared_ptr<int>(pi2)); // 危险，混用了普通指针和shared_ptr
+//process(pi2); // error: 不能将int*转换为一个shared_ptr<int>
+process(shared_ptr<int>(pi2)); // 危险，混用了普通指针和shared_ptr，pi2指向的内存将在执行完后被释放！
+//int j = *pi2; // error: pi2是空悬指针
+// shared_ptr<int> pi5(pi4.get()); // 不要将shared_ptr.get()获得的指针用于初始化另一个shared_ptr
+```
+- unique_ptr用于对一个对象的独占权：一个时刻只能有一个unique_ptr指向一个给定对象
+```cpp
+unique_ptr<int> p1(new int(42));
+//unique_ptr<int> p2(p1), p3; // error: unique_ptr不支持拷贝
+//p3 = p1; // error: unique_ptr不支持赋值
+unique_ptr<int> p2(std::move(p1)); // ok: unique_ptr可以移动
+unique_ptr<int> p3(7);
+p3.reset(p2.release()); // 将p2指向的对象的所有权转移给p3
+//p3.release(); // error: p3将丢失指针，指针指向的内存将一直不会被释放
+```
+- weak_ptr是指向一个由shared_ptr管理的对象的"弱引用"，以便可以检查该对象是否仍然存在，同时又不会意外地延长对象生存期
+```cpp
+weak_ptr<int> wp;
+shared_ptr<int> check;
+{
+   auto sp = make_shared<int>(42);
+   wp = sp;
+   if (check = wp.lock()) { // return true
+      ...
+   }
+}
+if (check = wp.lock()) { // return false
+   ...
+}
+```
 
+## 12.2 动态数组
+- new与数组
+```cpp
+int *a = new int[10]; // 默认初始化，元素是未定义的值
+int *b = new int[10](); // 值初始化，元素是0
+int *c = new int();
+delete [] a; // 数组中的元素按逆序销毁
+delete b; // UB
+delete [] c; // UB
+```
+- allocator
+
+# 13. 拷贝控制
+- 类的拷贝控制操作包括对象的拷贝、移动、复制、销毁，是通过copy ctor, copy-assignment operator, move ctor, move-assignment operator, dtor这5个函数来实现的
+
+## 13.1 拷贝、赋值与销毁
+- 直接初始化是以函数匹配的方式在构造函数中选择与所提供参数最匹配的。拷贝初始化是将右侧运算对象拷贝到正在创建的对象中。
+```cpp
+string dots(10, '.');
+string s1(dots); 
+string s2 = dots; 
+string s3 = ".........."; 
+string s4 = string(10, '.');
+string fun(string a) { return a };
+fun(dots);
+vector<string> strs;
+strs.push_back(dots);
+strs.emplace_back(dots);
 ```
