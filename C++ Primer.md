@@ -626,7 +626,15 @@ strs.emplace_back(dots);
 - （包括拷贝在内的）赋值运算符通常返回一个指向左侧对象的引用（\*this）
 - 析构函数在对象被销毁时被调用。对象的引用或普通指针离开作用域时不会调用对象的析构函数。智能指针在引用计数为0时会调用
 ```cpp
-{
-   
+{ // 一个新的作用域
+   Data *p1 = new Data;
+   Data &ref_data = *p1;
+   auto p2 = make_shared<Data>();
+   Data d(*p1);
+   vector<Data> vec = {*p2};
+   // delete p1; // 普通指针只有主动delete时才会调用析构函数
 }
+// 离开作用域时，p1和ref_data指向的同一对象不会析构
+// p2, d, vec的元素均会析构
 ```
+-            
