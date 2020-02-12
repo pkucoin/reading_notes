@@ -637,4 +637,11 @@ strs.emplace_back(dots);
 // 离开作用域时，p1和ref_data指向的同一对象不会析构
 // p2, d, vec的元素均会析构
 ```
--            
+- 合成析构函数通常为空。析构函数本身并不销毁成员。         
+- 三五法则：这里的三指三个控制类拷贝的操作（copy ctor, copy assignment operator, dtor）；五还包括另外两个移动操作(move ctor, move assignment operator)
+- 三五法则a：需要析构函数的类也需要拷贝和赋值操作
+  - 需要析构意味着需要在销毁时释放成员的内存，合成的拷贝和赋值操作会直接拷贝这些成员指针，造成use after free/delete两次等问题
+  - 显然反之并不成立：需要拷贝和赋值操作的类并不一定需要析构函数
+- 三五法则b：需要拷贝操作的类也需要赋值操作，反之亦然
+- =default和=delete
+  - =default只能用于生成默认构造/拷贝构造函数，=delete可以用于除了析构函数意外的函数
