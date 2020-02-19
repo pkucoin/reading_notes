@@ -709,6 +709,74 @@ StrVec& Strvec::operator=(StrVec &&rhs) noexcept
 
 # 14. 重载运算和类型转换
 ```cpp
+class MyStr {
+   string data;
+   int num;
+public:
+   // 赋值、下标、调用、成员访问运算符必须是成员
+   // 复合赋值、递增、递减、解引用通常是成员
+   
+   // （复合）赋值运算符返回左侧对象的引用
+   MyStr& operator=(string &s) {
+      data = s;
+      return *this;
+   }
+   
+   // 下标运算符通常定义两个版本：返回普通引用和常量引用
+   char& operator[](size_t n) { // 普通引用版本用于非const对象，可以修改
+      return data[n];
+   }
+   const char& operator[](size_t n) const { // 常量版本用于const对象，不可修改
+      return data[n];
+   }
+   
+   // 递增递减通过参数区分前后置
+   // MyStr ms; 
+   // ms++(0); // 后置
+   // ms++(); // 前置
+   MyStr& MyStr::operator++() { // 无参数，表明是前置版本，返回引用
+      ++num;
+      return *this;
+   }
+   MyStr MyStr::operator++(int) { // 增加一个额外参数，表明是后置版本，返回的是值
+      auto ret = *this;
+      ++*this;
+      return ret;
+   }
+   
+   // 定义了函数调用运算符的对象成为函数对象（functor）
+   void operator()() {
+   }
+   
+   // 类型转换运算符通常为const成员，参数列表必须为空
+   // 必须不声明返回值类型，其返回值类型与类型名一致；
+   // 声明为explicit防止隐式转换，但用作条件判断时仍会隐式调用
+   // 如果同时存在A->B和B->A的类型转换会引起二义性用
+   explicit operator double() const {
+      return static_cast<double>(num);
+   }
+};
 
+// 重载输入运算符必须处理异常，并在发生错误时保证对象处于正确状态
+istream &operator>>(istream &is, MyStr &ms) {
+}
+
+// 标准库类型function<retType(args)>统一定义了具有相同调用形式（参数个数、顺序、类型和返回值类型）的可调用对象，这些对象的实际类型可以是函数指针、functor、lambda等等不同的类型
+map<string, function<int(int, int)>> ops = {
+   {"+", add}, // 函数指针
+   {"-", std::minus<int>()},  // 标准库functor
+   {"/", divide()}, // 用户自定义functor
+   {"*", [](int i, int k) { return i * j; }}, // 匿名lambda
+   {"%", mod} }; // 命名lambda
+};
+
+// 重载函数的名字会已引起歧义，使用函数指针或lambda可以指明究竟是哪一个版本
+int (*fp_add)(int, int) = add;
+ops["+"] = [](int a, int b) { return add(a, b); };
 ```
 
+# 15. 面向对象程序设计
+## 15.1 OOP概述
+- 数据抽象：类的接口与实现分离
+- 继承：相似类型的层次关系。通过虚函数，派生类定义自己的操作
+- 动态绑定：
