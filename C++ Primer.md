@@ -783,4 +783,27 @@ ops["+"] = [](int a, int b) { return add(a, b); };
 
 ## 15.2 定义基类和派生类
 - 虚函数：基类希望派生类override的成员函数，使用基类指针/引用调用时将被动态绑定
-  - 构造函数不能被声明为virtual。
+  - 构造函数之外的非静态函数，只能出现在类内部声明语句中
+  - 派生类并不一定override基类的虚函数（此时则像普通成员函数那样继承）
+  - 派生类不一定要再次声明virtual，可以在参数列表后使用override关键词
+```cpp
+class Base {
+private:
+   int b_int;
+protected:  
+   string b_str;
+public:
+   Base() = default;
+   Base(int i, string &s) : b_int(i)
+   virtual int fun(int t);
+   virtual ~Base() = default; // 析构函数总应该是虚函数
+};
+
+class Derived : public Base {
+private:
+   int d_int;
+public:
+};
+```
+- 派生类
+  - 
