@@ -799,11 +799,34 @@ public:
    virtual ~Base() = default; // 析构函数总应该是虚函数
 };
 
-class Derived : public Base {
+class Derived; // 派生类的前置声明也不需要派生列表
+class Derived final : public Base { // 1. 此时Base必须已经final阻止了Derived再被继承
 private:
-   int d_int;
+   double d_double;
 public:
+   Derived() = default;
+   // 使用基类的构造函数初始化基类成员，然后按声明顺序初始化派生类成员
+   Derived(int i, string &s, double d) : Base(i, s), d_double(d) {} 
+   int fun(int t) override; // 使用override关键字可以在没有正确override（参数或返回类型不一致）的时候引发编译报错
 };
+
+// 派生类到基类的转换
+Base b;
+Derived d;
+// 基类的指针和引用静态类型和动态类型可能不一致，动态类型在运行时才确定
+// 派生类向基类的自动类型转换只对指针/引用有效
+Base *p = &b;
+p = &d;
+p->fun(1); // 调用派生类fun
+p->Base::fun(1); // 强制调用基类fun
+Base &r = d;
+Derived *pd = &b; // error: 不能将基类转换成派生类
+b = d; // 调用Base::operator=(const Base&)，只会拷贝基类成员，派生类的成员被忽略
 ```
-- 派生类
-  - 
+
+## 15.3 虚函数
+- 通过对象的指针/引用访问虚函数，直到运行时才会确定调用哪个版本的函数
+- 基类声明virtual的函数在其所有派生类中都是虚函数，无论在派生类是否声明为virtual。基类可以在成员函数声明final来阻止派生类override该函数
+
+## 15.4 抽象基类
+- 
