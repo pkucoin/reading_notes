@@ -858,12 +858,47 @@ b = d; // 调用Base::operator=(const Base&)，只会拷贝基类成员，派生
 
 # 16. 模板与泛型编程
 ## 16.1 定义模板
+- 在实例化模板时才生成特定类型的代码
+- 生成实例化版本时需要函数模板/类模板成员函数的定义。因此模板的声明和定义都放在模板头文件中
+- 大部分编译错误在实例化时报告。保证类型实参满足模板要求是caller's duty。
 ```cpp
 // 函数模板
-template <typename T>
-int cmp(const T &v1, const T &v2)
+template <typename T, unsigned int N> // 非类型参数只能是常量值
+inline int cmp(const T &v1, const T &v2)
 {
    if (v1 == v2) return 0;
-   
+   int T; // error: 模板参数名不能重用
 }
+
+// 类模板：类模板的每一个实例都是一个独立的类，之间没有关联，每一个实例都有其自己的static成员实例。
+template <typename T1, typename T2=less<T1>> // 一个模板参数右侧的所有模板参数都有默认实参时，它才能有默认模板实参
+class CName {};
+template <typename T> using aliasname = CName<T, int>; // 类型别名可以固定其中一个或多个模板参数
+
+// 成员模板
+template <typename T1, typename T2>
+template <typename T3>
+void CName<T1,T2>::operator()(T3 *p) const { cout << "" << endl; delete p; };
+
+// 模板显式实例化
+extern template class CName<int, double>; // 声明，可以有多个
+tempalte class Cname<int, double>;        // 定义，只能有一个
+```
+
+## 16.2 模板实参推断
+- 实参传递给模板类型的函数形参时：
+   - 顶层const会被忽略
+   - 只有非const指针/引用->const指针/引用和数组名/函数名->指针的转换是自动应用的
+   - 传递给相同的模板形参的实参类型必须相同
+```cpp
+template <typename T> T fobj(T, T);
+template <typename T> T fref(const T&, const T&);
+string s1 = "a";
+const string s2 = "b";
+fobj(s1, s2); // ok: T为string, s2的顶层const被忽略
+fref(s1, s2); // ok: T为const string&，应用规则2
+int x[10], y[42];
+fobj(x, y); // ok: T为int*
+fref(x, y); // error: 
+
 ```
