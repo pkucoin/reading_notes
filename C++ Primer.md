@@ -898,7 +898,7 @@ const string s2 = "b";
 fobj(s1, s2); // ok: T为string, s2的顶层const被忽略
 fref(s1, s2); // ok: T为const string&，应用规则2
 int x[10], y[42];
-fobj(x, y); // ok: T为int*
-fref(x, y); // error: 
+fobj(x, y); // ok: T为int*，应用规则2
+fref(x, y); // error: 形参是引用，实参是数组，不会自动转换为int*，而是int[10]和int[42]，类型不匹配
 
 ```
