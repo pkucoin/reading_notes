@@ -886,11 +886,11 @@ tempalte class Cname<int, double>;        // 定义，只能有一个
 ```
 
 ## 16.2 模板实参推断
-- 实参传递给模板类型的函数形参时：
-   - 顶层const会被忽略
-   - 只有非const指针/引用->const指针/引用和数组名/函数名->指针的转换是自动应用的
-   - 传递给相同的模板形参的实参类型必须相同
 ```cpp
+// 实参传递给模板类型的函数形参时:
+// 顶层const会被忽略
+// 只有非const指针/引用->const指针/引用和数组名/函数名->指针的转换是自动应用的
+// 传递给相同的模板形参的实参类型必须相同
 template <typename T> T fobj(T, T);
 template <typename T> T fref(const T&, const T&);
 string s1 = "a";
@@ -901,4 +901,22 @@ int x[10], y[42];
 fobj(x, y); // ok: T为int*，应用规则2
 fref(x, y); // error: 形参是引用，实参是数组，不会自动转换为int*，而是int[10]和int[42]，类型不匹配
 
+// 显式指定函数模板参数
+template<typename T1, typename T2, typename T3>
+T1 sum(T2, T3);
+//auto v = sum(1, 2); // error: 不能推断T3的类型
+auto v = sum<long, long>(1, 2); // 显式指定模板实参
+long long a = 3;
+int b = 4;
+fref(a, b); // error：类型不匹配
+fref<long long>(a, b); // ok: 显式指定模板实参后可以进行正常的类型转换
+
+// 使用尾置返回类型来指定不确切类型
+template <typename It>
+auto fun(It beg, It end) -> typename remove_reference<decltype(*beg)>::type 
+{
+   return *beg;
+}
+
+// 
 ```
