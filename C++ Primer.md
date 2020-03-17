@@ -918,5 +918,49 @@ auto fun(It beg, It end) -> typename remove_reference<decltype(*beg)>::type
    return *beg;
 }
 
+// 模板实参推断与引用
+template <typename T> void f1(T&);
+// f2和f3通常一起重载，f2用于绑定左值和const右值，f3用于绑定非const右值
+template<typename T> void f2(const T&);
+template<typename T> void f3(T&&);
+int i = 0;
+const int ci = 1;
+
+// 非const左值引用参数只接受左值
+f1(i); // T为int
+f1(ci); // T为const int
+//f1(5); // error: 必须是左值
+
+// const左值引用接受左值或右值，不会推断为const
+f2(i); // T为int
+f2(ci); // T为int
+f2(5); // T为int
+
+// 右值引用接受左值或右值
+// 引用折叠只能应用于间接创建的引用的引用，如模板参数：
+// X& &, X& &&, X&& &折叠为X&
+// X&& &&折叠为X&&
+f3(i); // T为int&
+f3(ci); // T为const int&
+f3(5); // T为int
+
+// std::move
+template <typename T>
+typename remove_reference<T>::type&& move(T&& t)
+{
+   // 无论t是左值引用还是右值引用，都remove其引用类型，然后加上右值引用
+   return static_cast<typename remove_reference<T>::type&&>(t);
+}
+string s1("hi"), s2;
+s2 = std::move(string("bye")); // T推断为string，move返回string&&
+s2 = std::move(s1); // T推断为string&，move仍然返回string&&
+
+// std::forward将实参连同其类型（左/右值引用、const）转发给其他函数
 // 
+template <typename F, typename T1, typename T2>
+void flip1(F f, T1 t1, T2 t2)
+{
+   f(t2, t1);
+}
+
 ```
