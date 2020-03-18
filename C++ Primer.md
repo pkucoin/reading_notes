@@ -956,7 +956,9 @@ s2 = std::move(string("bye")); // T推断为string，move返回string&&
 s2 = std::move(s1); // T推断为string&，move仍然返回string&&
 
 // std::forward将实参连同其类型（左/右值引用、const）转发给其他函数
-// 
+// 以模板函数flip为例，它接受一个函数f和两个参数，并将这两个参数交换次序传递给f
+void f(int v1, int& v2)
+
 template <typename F, typename T1, typename T2>
 void flip1(F f, T1 t1, T2 t2)
 {
