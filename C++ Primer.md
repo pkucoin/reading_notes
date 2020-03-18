@@ -957,12 +957,18 @@ s2 = std::move(s1); // T推断为string&，move仍然返回string&&
 
 // std::forward将实参连同其类型（左/右值引用、const）转发给其他函数
 // 以模板函数flip为例，它接受一个函数f和两个参数，并将这两个参数交换次序传递给f
-void f(int v1, int& v2)
-
 template <typename F, typename T1, typename T2>
 void flip1(F f, T1 t1, T2 t2)
 {
    f(t2, t1);
 }
+// 当f的参数中包含引用/const时，flip1版本就会出现问题。
+void f(int v1, int& v2)
+{
+   cout << v1 << "," << ++v2 << endl;
+}
+flip1(f, j, 42); // T1和T2均推断为int, j被拷贝到t1, 然后调用f(t2, t1)。此时j并未被改变
+
+// flip2版本可以解决左值引用类型的参数，但是不能接受右值引用类型的参数
 
 ```
