@@ -967,8 +967,22 @@ void f(int v1, int& v2)
 {
    cout << v1 << "," << ++v2 << endl;
 }
+f(42, j);
 flip1(f, j, 42); // T1和T2均推断为int, j被拷贝到t1, 然后调用f(t2, t1)。此时j并未被改变
 
 // flip2版本可以解决左值引用类型的参数，但是不能接受右值引用类型的参数
+template <typename F, typename T1, typename T2>
+void flip2(F f, T1&& t1, T2&& t2)
+{
+   f(t2, t1);
+}
+void g(int&& i, int &j) 
+{
+   cout << i << "," << j << endl;
+}
+g(42, j);
+flip2(g, j, 42); // error: t2的类型是右值引用，但其仍然是一个左值表达式，不能传递给g的右值引用参数i
 
+// flip的正确版本使用std::forward转发参数，forward<T>(t)相当于static_cast<T&&>(t)
+// 这样做，如果t是
 ```
