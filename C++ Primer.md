@@ -984,5 +984,38 @@ g(42, j);
 flip2(g, j, 42); // error: t2的类型是右值引用，但其仍然是一个左值表达式，不能传递给g的右值引用参数i
 
 // flip的正确版本使用std::forward转发参数，forward<T>(t)相当于static_cast<T&&>(t)
-// 这样做，如果t是
+template <typename F, typename T1, typename T2>
+void flip(F f, T1&& t1, T2&& t2)
+{
+   f(forward<T2>(t2), forward<T1>(t1));
+}
+// 如果t是非const左值int引用，那么转发的参数类型为int&
+// 如果t是const左值int引用，那么转发的参数类型为const int&
+// 如果t是右值int，那么转发的参数类型为int&&
+
+int& k = j;
+flip(g, k, 42); // k是非const左值引用，T1推断并转发为int&；42是右值，T2推断为int，转发为int&&
+```
+
+## 16.3 重载与模板
+```cpp
+// 多个重载模板对一个调用提供同样好的匹配时，选择最特例化的版本
+template <typename T> string debug_rep(const T& t); // v1
+template <typename T> string debug_rep(T* p); // v2
+string s = "123";
+const string* sp = &s;
+debug_rep(sp); // 选择v2
+
+// 非模板函数与模板函数提供同样好的匹配时，选择非模板版本
+string debug_rep(const string& t); // v3
+debug_rep(s)； // 选择v3
+
+// 字符串字面常量，选择最特例化的指针版本
+debug_rep("123"); // v2: 对于v1，T为char[4]; 对于v2，函数参数从数组名到指针的转换被认为是精确匹配；对于v3，需要将const char*转换为string
+```
+
+## 16.4 可变参数模板
+```cpp
+template <typename T, typename... Args>
+void fun(const T& t, const Args&... rest);
 ```
