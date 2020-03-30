@@ -1016,6 +1016,21 @@ debug_rep("123"); // v2: 对于v1，T为char[4]; 对于v2，函数参数从数�
 
 ## 16.4 可变参数模板
 ```cpp
+// 可变参数模板通常定义为递归的，以一个非可变参数模板作为最后的调用
+template <typename T>
+void print(const T& t)
+{
+   cout << t << endl;
+}
 template <typename T, typename... Args>
-void fun(const T& t, const Args&... rest);
+void print(const T& t, const Args&... rest)
+{
+   // 通过sizeof...获取类型参数和函数参数的数目
+   // cout << sizeof...(Args) << ", " << sizeof...(rest) << endl;
+   cout << t << ", ";
+   print(rest...);
+}
+string s = "hello";
+int i = 10;
+print(42, s, i); // 42, hello, 10
 ```
