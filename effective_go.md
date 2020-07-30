@@ -35,3 +35,16 @@ for i, j := 0, len(a) - 1; i < j; i, j = i + 1, j - 1 {
 ```
 
 - switch
+```golang
+f := Fun()
+switch t := f.(type) {
+default:
+    fmt.Printf("unexpected type %T\n", t)     // %T prints whatever type t has
+case bool:
+    fmt.Printf("boolean %t\n", t)             // t has type bool
+case int:
+    fmt.Printf("integer %d\n", t)             // t has type int
+}
+```
+# 函数
+- 返回值可以有多个，可以在函数声明中有名字
