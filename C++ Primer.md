@@ -800,7 +800,7 @@ public:
 };
 
 class Derived; // 派生类的前置声明也不需要派生列表
-class Derived final : public Base { // 1. 此时Base必须已经final阻止了Derived再被继承
+class Derived final : public Base { // 1. 此时Base必须已经定义 2.final阻止了Derived再被继承
 private:
    double d_double;
 public:
