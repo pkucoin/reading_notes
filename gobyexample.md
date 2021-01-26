@@ -42,10 +42,33 @@ func main() {
           fmt.Printf("Don't know type %T\n", t)
       }
   }
-  // 数组和切片
+  
+  // 数组
   var twoD [2][3]int // 定长，0值初始化，二维数组
   fmt.Println("len of twoD: ", len(twoD)) // 2
   fmt.Println("len of twoD[1]: ", len(twoD[1])) // 3
+  // 切片
+  s := make([]string, 3)
+  t := []string{"g", "h", "i"}
+  s = append(s, "a", "b")
+  copy(c, s[2:5]) // c: {"", "a", "b"}
+  // Map
+  m := make(map[string]int)
+  m["foo"] = 1
+  _, prs := m["foo"]
+  n := map[string]int{"foo": 1, "bar": 2}
+  delete(m, "foo")
+  _, prs = n["foo"]
+  _, prs = n["foo"]
 }
+
+//range
+for _, num := range s {
+  
+}
+for k, v := range m {
+  fmt.Println("%s -> %s", k, v)
+}
+
 
 ```
