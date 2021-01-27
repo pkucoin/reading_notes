@@ -60,15 +60,49 @@ func main() {
   delete(m, "foo")
   _, prs = n["foo"]
   _, prs = n["foo"]
-}
 
-//range
-for _, num := range s {
+
+  // range
+  for _, num := range s { // 不需要index
+  }
+  for k, v := range m {
+    fmt.Println("%s -> %s", k, v)
+  }
+  for k := range m { // 只需要key
+    fmt.Println("key:", k)
+  }
+  for i, c := range "go" { // 遍历string得到每一个字符的Unicode code point
+    fmt.Println(i, c)
+  }
+  
+  // 函数
+  func f(a, b, c int) (int, int) { // 多参数多返回值
+    return a + b, c
+  }
+  // 可变参数
+  func sum(nums ...int) int { 
+    total := 0
+    for _, num := range nums {
+      total += num
+    }
+    return total
+  }
+  sum(1, 2, 3)
+  nums := []int{1, 2, 3}
+  sum(num...)
+  // 闭包
+  func f() func() int {
+    i := 0
+    return func() int {
+      i++
+      return i
+    }
+  }
+  nextInt := f()
+  nextInt() // 1
+  nextInt() // 2
+  nextInt2 := f()
+  nextInt() // 1
   
 }
-for k, v := range m {
-  fmt.Println("%s -> %s", k, v)
-}
-
-
 ```
