@@ -47,20 +47,20 @@ func main() {
   var twoD [2][3]int // 定长，0值初始化，二维数组
   fmt.Println("len of twoD: ", len(twoD)) // 2
   fmt.Println("len of twoD[1]: ", len(twoD[1])) // 3
+  
   // 切片
   s := make([]string, 3)
   t := []string{"g", "h", "i"}
   s = append(s, "a", "b")
   copy(c, s[2:5]) // c: {"", "a", "b"}
+  
   // Map
   m := make(map[string]int)
   m["foo"] = 1
   _, prs := m["foo"]
   n := map[string]int{"foo": 1, "bar": 2}
-  delete(m, "foo")
+  delete(n, "foo")
   _, prs = n["foo"]
-  _, prs = n["foo"]
-
 
   // range
   for _, num := range s { // 不需要index
@@ -79,6 +79,7 @@ func main() {
   func f(a, b, c int) (int, int) { // 多参数多返回值
     return a + b, c
   }
+  
   // 可变参数
   func sum(nums ...int) int { 
     total := 0
@@ -90,8 +91,9 @@ func main() {
   sum(1, 2, 3)
   nums := []int{1, 2, 3}
   sum(num...)
+  
   // 闭包
-  func f() func() int {
+  func f() func() int { // 返回值是一个void参数int返回值的函数
     i := 0
     return func() int {
       i++
@@ -103,6 +105,20 @@ func main() {
   nextInt() // 2
   nextInt2 := f()
   nextInt() // 1
+  
+  // 值和引用
+  func zeroval(ival int) {
+    ival = 0
+  }
+  func zeroptr(iptr *int) {
+    *iptr = 0
+  }
+  i := 1
+  zeroval(i)
+  zeroptr(&i)
+  fmt.Println(&i)
+  
+  // 结构体
   
 }
 ```
