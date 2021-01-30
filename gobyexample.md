@@ -118,7 +118,62 @@ func main() {
   zeroptr(&i)
   fmt.Println(&i)
   
-  // 结构体
+  // 结构体及方法
+  type rect struct {
+      width, height int
+  }
+
+  func (r *rect) area() int {
+      return r.width * r.height
+  }
+
+  func (r rect) perim() int {
+      return 2*r.width + 2*r.height
+  }
+
+  r := rect{width: 10, height: 5}
+
+  fmt.Println("area: ", r.area())
+  fmt.Println("perim:", r.perim())
+
+  rp := &r
+  fmt.Println("area: ", rp.area())
+  fmt.Println("perim:", rp.perim())
+  
+  // 接口：其实就是规定方法签名的抽象基类
+  type geometry interface {
+    area() float64
+    perim() float64
+  }
+  func measure(g geometry) {
+    fmt.Println(g)
+    fmt.Println(g.area())
+    fmt.Println(g.perim())
+  }
+  measure(r)
+  
+  // 错误
+  type argError struct {
+    arg  int
+    prob string
+  }
+  func (e *argError) Error() string { // error本身就是个规定了Error方法的内置interface
+      return fmt.Sprintf("%d - %s", e.arg, e.prob)
+  }
+  func f2(arg int) (int, error) {
+      if arg == 42 {
+          return -1, &argError{arg, "can't work with it"}
+      }
+      return arg + 3, nil
+  }
+  _, e := f2(42)
+  if ae, ok := e.(*argError); ok { // 通过类型断言得到argError类型的ae
+      fmt.Println(ae.arg)
+      fmt.Println(ae.prob)
+  }
+  
+  // goroutine：go的轻量级线程实现
+  // channel：go的有限长阻塞队列实现
   
 }
 ```
