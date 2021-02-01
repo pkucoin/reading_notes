@@ -174,6 +174,16 @@ func main() {
   
   // goroutine：go的轻量级线程实现
   // channel：go的有限长阻塞队列实现
+  func worker(done chan<- bool) { // 指定了channel方向，只能收不能发
+    fmt.Print("working...")
+    time.Sleep(time.Second)
+    fmt.Println("done")
+    done <- true
+  }
+  
+  done := make(chan bool, 1)
+  go worker(done)
+  <- done // 阻塞至worker跑完
   
 }
 ```
