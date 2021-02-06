@@ -185,5 +185,24 @@ func main() {
   go worker(done)
   <- done // 阻塞至worker跑完
   
+  // 使用select的优雅的超时实现
+  select {
+    case <-done:
+      fmt.Println("done")
+    case <-time.After(1 * time.Second):
+      fmt.Println("timeout 1")
+    //default: // 如果加上default则变成非阻塞
+      //fmt.Println("non-blocking")
+  }
+  close(done)
+  d, more := <-done //  当channel被关闭后，more会是false
+  
+  queue := make(chan string, 2)
+  queue <- "one"
+  queue <- "two"
+  close(queue) // 关闭并不影响其中尚未接收的值 
+  for ele := range queue {
+    fmt.Println(ele)
+  }
 }
 ```
