@@ -206,48 +206,51 @@ func main() {
   }
   // 定时器的创建和取消
   timer2 := time.NewTimer(time.Second)
-    go func() {
+   go func() {
         <-timer2.C
         fmt.Println("Timer 2 fired")
     }()
     stop2 := timer2.Stop()
-}
-// 心跳
-ticker := time.NewTicker(500 * time.Millisecond)
-done := make(chan bool)
-go func() {
-  for {
-    select {
-      case <-done:
-        return
-      case now := <- ticker.C:
-        fmt.Println("Tick at ", now)
+  }
+  // 心跳
+  ticker := time.NewTicker(500 * time.Millisecond)
+  done := make(chan bool)
+  go func() {
+    for {
+      select {
+        case <-done:
+          return
+        case now := <- ticker.C:
+          fmt.Println("Tick at", now)
+      }
+    }
+  }()
+  time.Sleep(1600 * time.Milliseconds)
+  ticker.Stop() // select在输出3次后会阻塞
+  done <- true  // select return
+
+  // 一个简单的线程池，使用WaitGroup等待线程完成
+  func worker(id int, jobs <-chan int, wg *sync.WaitGroup) {
+    defer wg.Done()
+    for job := range <-jobs {
+      fmt.Println("job %d start", job)
+      time.Sleep(time.second)
+      fmt.Println("job %d finished", job)
     }
   }
-}()
-time.Sleep(1600 * time.Milliseconds)
-ticker.Stop() // select在输出3次后会阻塞
-done <- true  // select return
-
-// 一个简单的线程池，使用WaitGroup等待线程完成
-func worker(id int, jobs <-chan int, wg *sync.WaitGroup) {
-  defer wg.Done()
-  for job := range <-jobs {
-    fmt.Println("job %d start", job)
-    time.Sleep(time.second)
-    fmt.Println("job %d finished", job)
+  var wg sync.WaitGroup
+  jobs := make(chan int)
+  for i := 1; i <= 3; i++ {
+    wg.Add(1)
+    go worker(i, jobs, wg)
   }
-}
-var wg sync.WaitGroup
-jobs := make(chan int)
-for i := 1; i <= 3; i++ {
-  wg.Add(1)
-  go worker(i, jobs, wg)
-}
-for j := 1; j <= 5; j++ {
-  jobs <- j
-}
-close(jobs)
-wg.Wait()
+  for j := 1; j <= 5; j++ {
+    jobs <- j
+  }
+  close(jobs)
+  wg.Wait()
 
+  // 排序
+  nums := []int{7, 2, 4}
+  
 ```
