@@ -251,6 +251,17 @@ func main() {
   wg.Wait()
 
   // 排序
-  nums := []int{7, 2, 4}
+  strs := []string{"a", "bd", "cef"}
+  sort.Strings(strs) // 基本类型内置sort
+  // 自定义类型
+  func (s byLength) Len() int {
+    return len(s)
+  }
+  func (s byLength) Swap(i, j string) {
+      s[i], s[j] = s[j], s[i]
+  }
+  func (s byLength) Less(i, j int) bool {
+      return len(s[i]) < len(s[j])
+  }
   
 ```
