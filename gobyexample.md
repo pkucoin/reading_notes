@@ -253,7 +253,8 @@ func main() {
   // 排序
   strs := []string{"a", "bd", "cef"}
   sort.Strings(strs) // 基本类型内置sort
-  // 自定义类型
+  // 自定义类型排序
+  type byLength []string
   func (s byLength) Len() int {
     return len(s)
   }
@@ -263,5 +264,34 @@ func main() {
   func (s byLength) Less(i, j int) bool {
       return len(s[i]) < len(s[j])
   }
+  sort.Sort(byLength(strs))
   
+  // String的相关操作
+  // http://golang.org/pkg/strings/
+  // 格式化字符串
+  // https://golang.org/pkg/fmt/
+  
+  // 正则
+  match, _ := regexp.MatchString("p([a-z]+)ch", "peach")
+  r, _ := regexp.Compile("p([a-z]+)ch")
+  r.MatchString("peach")
+  
+  // 时间
+  now := time.Now()
+  now.Unix()
+  then := time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC)
+  diff := now.Sub(then)
+  
+  // 随机
+  seed := rand.NewSource(time.now().UnixNano())
+  r := rand.New(seed)
+  r.Intn(100)
+  
+  // stoi/stod
+  f, _ := strconv.ParseFloat("1.234", 64)
+  i, _ := strconv.ParseInt("123", 0, 64)
+  k, _ := strconv.Atoi("135")
+  
+  // SHA1/MD5
+  h := 
 ```
