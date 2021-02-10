@@ -292,6 +292,17 @@ func main() {
   i, _ := strconv.ParseInt("123", 0, 64)
   k, _ := strconv.Atoi("135")
   
-  // SHA1/MD5
-  h := 
+  // SHA1/MD5/base64
+  s := "abc123!?$*&()'-=@~"
+  h := sha1.New() // md5.New()
+  h.Write([]byte(s))
+  h.Sum(nil)
+  b64.StdEncoding.EncodeToString([]byte(s))
+  
+  // 文件读写，命令行，环境变量，略
+  
+  // HTTP服务器
+  
+  // 进程
+  
 ```
