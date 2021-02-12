@@ -54,8 +54,8 @@ func (file *File) Write(b []byte) (n int, err error) {
   n, err = file.Write(b)
   return 
 }
-- defer类似于C++的RAII，多用于资源必须释放的场合，例如释放互斥锁和关闭文件
 ```
+- defer类似于C++的RAII，多用于资源必须释放的场合，例如释放互斥锁和关闭文件
 
 # 数据
 - new只分配一块零值内存并返回其地址而不做初始化，零值对象一样可以直接用
