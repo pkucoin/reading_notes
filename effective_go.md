@@ -14,6 +14,7 @@ x<<8 + y<<16 // 等价于(x<<8) + (y<<16)
 
 # 分号
 ```golang
+// 分行会被隐式地插入在每个语句结尾
 if i < f() {
 // 如果将{放在这里，会导致分号插在之前，语义就不同了
   g()
@@ -48,3 +49,22 @@ case int:
 ```
 # 函数
 - 返回值可以有多个，可以在函数声明中有名字
+```golang
+func (file *File) Write(b []byte) (n int, err error) {
+  n, err = file.Write(b)
+  return 
+}
+- defer类似于C++的RAII，多用于资源必须释放的场合，例如释放互斥锁和关闭文件
+```
+
+# 数据
+- new只分配一块零值内存并返回其地址而不做初始化，零值对象一样可以直接用
+```golang
+type SyncedBuffer struct {
+  lock sync.Mutex
+  buf bytes.Buffer
+}
+p := new(SyncedBuffer) // p.lock和p.buf均可以直接使用
+```
+
+- 返回
