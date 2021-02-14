@@ -67,4 +67,6 @@ type SyncedBuffer struct {
 p := new(SyncedBuffer) // p.lock和p.buf均可以直接使用
 ```
 
-- 返回
+- 返回局部变量的地址是完全ok的。Go会在编译时做逃逸分析，自动将其在堆上分配
+```golang
+```
