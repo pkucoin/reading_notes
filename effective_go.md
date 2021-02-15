@@ -66,21 +66,54 @@ type SyncedBuffer struct {
 }
 p := new(SyncedBuffer) // p.lock和p.buf均可以直接使用
 ```
-
 - 返回局部变量的地址是完全ok的。Go会在编译时做逃逸分析，自动将其在堆上分配
 ```golang
 func NewFile(fd int, name stirng) *File {
   return &File{fd: fd, name: name} // 以键值对方式构造可以以任意顺序，未给出的field为零值
 }
-
+```
 - make只用于创建map,slice和channel并返回类型T的引用
 - Array
 ```golang
 arraya := [3]int{1,2,3}
-arrayb := arraya // 复制所有元素，a和b是不同的数组
+arrayb := arraya // Array是值类型,所以会复制所有元素，a和b是不同的数组
 var arrayc [4]int
 arrayc = arrayb // error：[3]int和[4]int是不同的类型
 func(arrayb) // 数组参数b会被复制到函数中
 ```
 - Slice
+```golang
+// slice是引用类型，传递参数
+func Append(slice, data[]byte) []byte {
+  l := len(slice)
+  if l + len(data) > cap(slice) { // 重新分配
+    // 为了后面的增长， 需分配两份。
+    newSlice := make([]byte, (l+len(data))*2)
+    // copy 函数是预声明的， 且可用于任何切片类型。
+    copy(newSlice, slice)
+    slice = newSlice
+  } 
+  slice = slice[0:l+len(data)]
+  for i, c := range data {
+    slice[l+i] = c
+  } 
+  return slice
+}
+```
+- Map 
+```golang
+// Map是引用类型
+ma := make(map[string]int)
+mb := ma // 指向同一个Map
+// Map的key必须是定义了相等关系的类型
+mc := make(map[[]int]int) // error: slice没有定义相等关系，不能作为key类型
+// 判断映射key是否存在并取对应值的习惯用法
+if val, ok := ma[key]; ok {
+  return val
+}
+// delete不需要保证key存在
+delete(ma, "nonexist")
+```
+- 打印
+- append
 
