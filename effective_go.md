@@ -69,4 +69,18 @@ p := new(SyncedBuffer) // p.lock和p.buf均可以直接使用
 
 - 返回局部变量的地址是完全ok的。Go会在编译时做逃逸分析，自动将其在堆上分配
 ```golang
+func NewFile(fd int, name stirng) *File {
+  return &File{fd: fd, name: name} // 以键值对方式构造可以以任意顺序，未给出的field为零值
+}
+
+- make只用于创建map,slice和channel并返回类型T的引用
+- Array
+```golang
+arraya := [3]int{1,2,3}
+arrayb := arraya // 复制所有元素，a和b是不同的数组
+var arrayc [4]int
+arrayc = arrayb // error：[3]int和[4]int是不同的类型
+func(arrayb) // 数组参数b会被复制到函数中
 ```
+- Slice
+
