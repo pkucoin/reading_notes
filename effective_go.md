@@ -122,4 +122,49 @@ func append(slice []T, ele ...T) []T
 // slice追加slice
 append(sx, sy...)
 ```
+# 初始化
+- 常量
+```golang
+const a = 1 << 2 // ok
+const b = math.Sin(math.Pi/4) // error: 常量的初始值必须在编译时可求值
+var home = os.Getenv("HOME") // ok: 变量的初始值在运行时才被计算
 
+type ByteSize float64
+const (
+  _ = iota // 忽略不需要的第一个值
+  KB ByteSize = 1 << (10 * iota) // 即 1 << (10 * 1)
+  MB                             // 即 1 << (10 * 2)，依此类推
+  GB
+  TB
+  PB
+  EB
+  ZB
+  YB
+)
+```
+- init函数
+```golang
+var WhatIsThe = AnswerToLife()
+
+func AnswerToLife() int {
+    return 42
+}
+
+// init的执行时机在导入pkg初始化完成以及当前pkg的所有变量完成初始化求值后才执行
+// 被导入的pkg中如果有init()也会在导入时被执行
+func init() {
+    WhatIsThe = 0
+}
+
+func main() {
+    if WhatIsThe == 0 {
+        fmt.Println("It's all a lie.") // 将会输出
+    }
+}
+```
+# 方法
+- （除了指针或接口的）已命名类型都可以定义方法
+- 方法以指针为接收者只能通过指针调用（因为指针方法可以修改接收者，而值调用会以复制的方式传递接收者），以值为接收者可通过指针和值调用
+- 如果是以指针为接收者，而变量b是可寻址时，b.Write会被自动改写为(&b).Write
+# 接口
+- 
