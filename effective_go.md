@@ -116,4 +116,10 @@ delete(ma, "nonexist")
 ```
 - 打印
 - append
+```golang
+// append的签名大体如此，但实际上golang并不支持泛型，所以其实现需要编译器支持
+func append(slice []T, ele ...T) []T
+// slice追加slice
+append(sx, sy...)
+```
 
