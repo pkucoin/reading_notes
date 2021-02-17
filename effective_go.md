@@ -151,7 +151,7 @@ func AnswerToLife() int {
 }
 
 // init的执行时机在导入pkg初始化完成以及当前pkg的所有变量完成初始化求值后才执行
-// 被导入的pkg中如果有init()也会在导入时被执行
+// 被导入的pkg中如果有init()也会在导入时被执行（从而可能带来意想不到的结果）
 func init() {
     WhatIsThe = 0
 }
@@ -164,7 +164,32 @@ func main() {
 ```
 # 方法
 - （除了指针或接口的）已命名类型都可以定义方法
-- 方法以指针为接收者只能通过指针调用（因为指针方法可以修改接收者，而值调用会以复制的方式传递接收者），以值为接收者可通过指针和值调用
+- 指针方法可以修改接收者，而值调用会以复制的方式传递接收者
+- 方法以指针为接收者只能通过指针调用，以值为接收者可通过指针和值调用
 - 如果是以指针为接收者，而变量b是可寻址时，b.Write会被自动改写为(&b).Write
-# 接口
-- 
+# 接口和类型
+```golang
+// type switch
+type Stringer interface {
+  String() string
+}
+func toString(value interface{}) string {
+  switch s := value.(type) {
+  case string:
+    return s
+  case Stringer:
+    return s.String()
+  default:
+    return ""
+  }
+}
+
+// type assertion
+if s, ok := value.(string); ok {
+}
+```
+# 空白标识符
+```golang
+import _ "net/http/pprof" // 为了pprof包的init函数而导入，不用到包的内容
+```
+
