@@ -190,6 +190,17 @@ if s, ok := value.(string); ok {
 ```
 # 空白标识符
 ```golang
-import _ "net/http/pprof" // 为了pprof包的init函数而导入，不用到包的内容
+// 仅为了pprof包的init函数而导入，不用到包的内容
+import _ "net/http/pprof" 
+
+// 为了确保类型RawMessage实现了Marshaler
+// 将nil转换为*RawMessage并赋给Marshaler，以此要求RawMessage实现Marshaler
+// 如果没有实现则会编译报错
+var _ json.Marshaler = (*RawMessage)(nil)
+```
+# 内嵌
+```golang
+// 接口内嵌
+
 ```
 
