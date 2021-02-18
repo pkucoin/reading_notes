@@ -200,6 +200,7 @@ import _ "net/http/pprof"
 var _ json.Marshaler = (*RawMessage)(nil)
 ```
 # 内嵌
+- 类型内嵌可以看作一种继承的实现
 ```golang
 // 接口内嵌
 type Reader interface {
@@ -233,10 +234,34 @@ job := NewJob(command, log.New(os.Stderr, "Job: ", log.Ldate))
 - 对共享变量的正确访问是困难的
 - Go的思想: 通过通信来共享内存，而不要通过共享内存来通信
 ```golang
+type Request struct {
+  args []int
+  f func([]int)int
+  replyChan chan int
+}
+func process(req *Request) {
+  req.replyChan <- req.f(args)
+}
 sem := make(chan int, MaxRequestNum)
 func Serve(queue chan *Request) {
   for req := range queue {
+    // 启动goroutine前往sem里放入1，保证了启动goroutine的最大数量
+    sem <- 1
     
+    // 写法1：req需要作为参数传入闭包而非直接使用，避免被不同的goroutine共享
+    go func(req *Request) {
+      process(req)
+      <- sem
+    }(req)
+    
+    // 写法2：每次循环时创建一个新的同名req，以保证req对每个goroutine是不同的
+    req := req
+    go func() {
+      process(req)
+      <- sem
+    }()
   }
 }
 ```
+- 区分并发concurrency和并行parallelism
+  -  
