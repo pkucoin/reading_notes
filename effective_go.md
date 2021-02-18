@@ -174,6 +174,7 @@ type Stringer interface {
   String() string
 }
 func toString(value interface{}) string {
+  // s的类型是value的实际类型，值为value
   switch s := value.(type) {
   case string:
     return s
@@ -201,6 +202,29 @@ var _ json.Marshaler = (*RawMessage)(nil)
 # 内嵌
 ```golang
 // 接口内嵌
+type Reader interface {
+  Read(p []byte) (n int, err error)
+}
+type Writer interface {
+  Write(p []byte) (n int, err error)
+}
+// ReadWriter是Reader和Writer的方法的组合
+type ReadWriter interface {
+  Reader
+  Writer
+}
+
+// 结构体内嵌
+type IReader struct {
+  // 实现了Reader接口
+  ...
+}
+
+type IWriter struct {
+  // 实现了Writer接口
+  ...
+}
+
 
 ```
 
