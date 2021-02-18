@@ -208,23 +208,35 @@ type Reader interface {
 type Writer interface {
   Write(p []byte) (n int, err error)
 }
-// ReadWriter是Reader和Writer的方法的组合
+// ReadWriter是Reader和Writer的方法签名的组合
 type ReadWriter interface {
   Reader
   Writer
 }
 
 // 结构体内嵌
-type IReader struct {
-  // 实现了Reader接口
-  ...
+type Job struct {
+  Command string
+  *log.Logger // 内嵌一个log.Logger类型的指针，但没有字段名
+}
+func NewJob(command string, logger *log.Logger) *Job {
+  return &Job{command, logger}
+}
+func (job *Job) logf(format string, args ...interface{}) {
+  // 注意Logger字段省略了包名
+  job.Logger.logf("%d: %s", job.Command, fmt.Sprintf(format, args...))
 }
 
-type IWriter struct {
-  // 实现了Writer接口
-  ...
-}
-
-
+job := NewJob(command, log.New(os.Stderr, "Job: ", log.Ldate))
 ```
-
+# 并发
+- 对共享变量的正确访问是困难的
+- Go的思想: 通过通信来共享内存，而不要通过共享内存来通信
+```golang
+sem := make(chan int, MaxRequestNum)
+func Serve(queue chan *Request) {
+  for req := range queue {
+    
+  }
+}
+```
