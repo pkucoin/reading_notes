@@ -264,4 +264,5 @@ func Serve(queue chan *Request) {
 }
 ```
 - 区分并发concurrency和并行parallelism
-  -  
+  - 并发：以独立运行的各组件构造程序
+  - 并行：在多核上并行执行程序
