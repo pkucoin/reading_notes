@@ -185,7 +185,7 @@ func toString(value interface{}) string {
   }
 }
 
-// type assertion
+// type assertion: 如果value是string类型则ok为true，s是string类型，s的值为value；否则ok为false
 if s, ok := value.(string); ok {
 }
 ```
@@ -266,3 +266,41 @@ func Serve(queue chan *Request) {
 - 区分并发concurrency和并行parallelism
   - 并发：以独立运行的各组件构造程序
   - 并行：在多核上并行执行程序
+  - runtime.GOMAXPROCS(0)返回CPU核数，大于0的参数则修改该数量
+- 漏桶算法
+```golang
+freeList := make(chan *Buffer, 100)
+serverChan := make(chan *Buffer)
+
+func client() {
+  for {
+    var b *Buffer
+    select {
+    case b = <- freeList:
+      // freeList中有可用的
+    default:
+      // 没有，新创建一个
+      b = new(Buffer)
+    }
+    load(b)
+    serverChan <- b
+  }
+}
+
+func server() {
+  for {
+    b := <-serverChan
+    process(b)
+    select {
+    case freeList <- b:
+      // 塞回freeList
+    default:
+      // freeList满了，不管
+    }
+  }
+}
+```
+# 错误
+- 使用多返回值将错误连同通常的返回值一起返回是好习惯
+- 使用type assertion对错误进行类型判断和进一步分析
+- panic应该尽量被避免，除非在init时发生导致程序没有正确设置无法运行
