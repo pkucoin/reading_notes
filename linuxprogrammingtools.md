@@ -1,0 +1,9 @@
+# gcc
+
+# gdb
+
+# make
+
+# tcpdump
+
+# 
